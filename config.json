@@ -1,0 +1,34 @@
+{
+  "decision_cycle_ms": 100,
+  "low_power_threshold": 15,
+  "emergency_battery": 5,
+  "thermal": {
+    "soc_warning": 45.0,
+    "soc_throttle": 50.0,
+    "soc_emergency": 60.0,
+    "gpu_warning": 47.0,
+    "gpu_throttle": 52.0,
+    "gpu_emergency": 62.0,
+    "skin_warning": 40.0,
+    "skin_throttle": 43.0,
+    "skin_emergency": 47.0,
+    "battery_warning": 40.0,
+    "battery_throttle": 45.0,
+    "battery_emergency": 50.0
+  },
+  "hysteresis": {
+    "idle_to_balanced": 0.5,
+    "balanced_to_performance": 2.0,
+    "performance_to_balanced": 8.0,
+    "creative_to_balanced": 5.0,
+    "min_state_duration": 1.0,
+    "low_power_exit": 30.0,
+    "low_power_battery_margin": 5
+  },
+  "pre_warm": {
+    "min_confidence": 75,
+    "max_seconds": 120,
+    "temp_limit": 42.0,
+    "battery_min": 40
+  }
+}

@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual envs
+venv/
+.venv/
+env/
+
+# Caches
+.pytest_cache/
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OMEGA runtime state (regenerated)
+*.pid
+*.state
+bus_log.jsonl
+incidents.jsonl
+trust.json
+personal_model.json
+capabilities.json
+history*.json
+boot_history.jsonl
+report*.html
+
+# Temp dirs
+acl_tmp/
+apk_deep_tmp/
+dexview_tmp/
+*.ring
+
+# Big binaries (keep source, not build)
+apks/*.apk
+storage/
+
+# Termux
+*.log
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Keep placeholders
+!.gitkeep
+
+# CSV history
+history*.csv
+history_live.csv

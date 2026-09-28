@@ -1,0 +1,63 @@
+{
+  "com.omega.mail": {
+    "app_id": "com.omega.mail",
+    "name": "OMEGA Mail",
+    "version": "2.1.0",
+    "author": "OMEGA Team",
+    "description": "Native mail client",
+    "permissions": [
+      "NETWORK",
+      "FILES_READ"
+    ],
+    "size_kb": 0,
+    "installed_ts": 1790559010,
+    "trust": 90,
+    "category": "productivity"
+  },
+  "com.omega.photos": {
+    "app_id": "com.omega.photos",
+    "name": "Photos",
+    "version": "1.5.3",
+    "author": "OMEGA Team",
+    "description": "Photo viewer and editor",
+    "permissions": [
+      "FILES_READ",
+      "CAMERA"
+    ],
+    "size_kb": 0,
+    "installed_ts": 1790559010,
+    "trust": 85,
+    "category": "creative"
+  },
+  "com.omega.notes": {
+    "app_id": "com.omega.notes",
+    "name": "Notes",
+    "version": "1.0.2",
+    "author": "OMEGA Team",
+    "description": "Simple note-taking",
+    "permissions": [
+      "FILES_READ",
+      "FILES_WRITE"
+    ],
+    "size_kb": 0,
+    "installed_ts": 1790559010,
+    "trust": 88,
+    "category": "productivity"
+  },
+  "com.thirdparty.cleaner": {
+    "app_id": "com.thirdparty.cleaner",
+    "name": "System Cleaner",
+    "version": "0.1.0",
+    "author": "Unknown Corp",
+    "description": "Cleans your device",
+    "permissions": [
+      "FILES_READ",
+      "FILES_WRITE",
+      "NETWORK"
+    ],
+    "size_kb": 0,
+    "installed_ts": 1790559010,
+    "trust": 25,
+    "category": "utility"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "app_id": "com.omega.notes",
+  "name": "Notes",
+  "version": "1.0.2",
+  "author": "OMEGA Team",
+  "description": "Simple note-taking",
+  "permissions": [
+    "FILES_READ",
+    "FILES_WRITE"
+  ],
+  "size_kb": 0,
+  "installed_ts": 1790559010,
+  "trust": 88,
+  "category": "productivity"
+}
