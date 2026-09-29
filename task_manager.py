@@ -672,6 +672,13 @@ def main():
         cli_kill(tm, args)
     elif cmd == "tasks":
         cli_tasks(tm)
+    elif cmd == "run-due":
+        results = tm.run_due_tasks()
+        if not results:
+            print("(no tasks due)")
+        else:
+            for r in results:
+                print(f"  [{r['task_id']}] {r['name']}: {r['outcome']}")
     elif cmd == "demo":
         demo()
     else:

@@ -1,0 +1,55 @@
+{
+  "tasks": {
+    "1": {
+      "task_id": 1,
+      "name": "temp_snapshot",
+      "command": [
+        "python3",
+        "/data/data/com.termux/files/home/omega/om_health.py"
+      ],
+      "interval_s": 300,
+      "enabled": true,
+      "last_run": 1790718466,
+      "run_count": 1,
+      "fail_count": 0,
+      "created": 1790718411
+    },
+    "2": {
+      "task_id": 2,
+      "name": "disk_check",
+      "command": [
+        "df",
+        "-h",
+        "/data"
+      ],
+      "interval_s": 3600,
+      "enabled": true,
+      "last_run": 1790718466,
+      "run_count": 1,
+      "fail_count": 0,
+      "created": 1790718411
+    },
+    "3": {
+      "task_id": 3,
+      "name": "cleanup_old",
+      "command": [
+        "find",
+        "/data/data/com.termux/files/home/omega",
+        "-maxdepth",
+        "1",
+        "-name",
+        "*.old",
+        "-mtime",
+        "+7",
+        "-delete"
+      ],
+      "interval_s": 86400,
+      "enabled": true,
+      "last_run": 1790718466,
+      "run_count": 1,
+      "fail_count": 0,
+      "created": 1790718411
+    }
+  },
+  "next_id": 4
+}
