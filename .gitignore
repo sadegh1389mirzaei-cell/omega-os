@@ -77,3 +77,9 @@ telemetry.log
 
 # Task manager runtime
 tasks.jsonl
+
+# Task manager runtime state
+tasks.json
+
+# Task manager runtime state
+tasks.json
