@@ -145,6 +145,26 @@ class ProcessBaseline:
                 f"cpu_max={self.max_cpu:.1f}% "
                 f"trust={self.trust}")
 
+    def adjust_trust(self, delta: int, reason: str = "") -> int:
+        """Adjust trust score, clamped to [0, 100]."""
+        old_trust = self.trust
+        self.trust = max(0, min(100, self.trust + delta))
+        return self.trust - old_trust
+
+
+# Trust deltas by severity
+TRUST_DELTAS = {
+    "INFO":     +1,     # benign process, slight trust gain
+    "LOW":      -5,
+    "MEDIUM":   -10,
+    "HIGH":     -25,
+    "CRITICAL": -50,
+}
+
+# Thresholds
+TRUST_WARN_LEVEL = 30
+TRUST_KILL_LEVEL = 15
+
 
 
 # ==============================================================
@@ -281,6 +301,12 @@ class SecurityAIv2:
         except OSError:
             pass
 
+        # Adjust trust based on severity
+        if subject in self.baselines:
+            delta = TRUST_DELTAS.get(severity, 0)
+            if delta != 0:
+                self.baselines[subject].adjust_trust(delta, kind)
+
         # Auto-quarantine on HIGH or CRITICAL
         if (self.auto_quarantine and self.quarantine
                 and severity in ("HIGH", "CRITICAL")
@@ -316,7 +342,6 @@ class SecurityAIv2:
                 self._emit("new_process", severity,
                           sig.name, reason, pid=sig.pid)
 
-            # Time decay on old baseline? Optional.
             b.count += 1
             b.total_cpu += sig.cpu_pct
             b.total_mem += sig.mem_pct
@@ -324,6 +349,20 @@ class SecurityAIv2:
             b.states_seen.add(sig.state)
             b.hours_seen.add(current_hour)
             b.last_seen = now
+
+            # Trust gain for well-behaved process
+            # Only adjust after enough samples to know it's normal
+            if b.count > 5 and b.count % 10 == 0:
+                b.adjust_trust(1, "stable_behavior")
+
+                # Check if trust has fallen too low
+                if b.trust <= TRUST_KILL_LEVEL:
+                    self._emit("low_trust", "HIGH", sig.name,
+                              f"trust={b.trust} (auto-kill)",
+                              pid=sig.pid)
+                elif b.trust <= TRUST_WARN_LEVEL:
+                    self._emit("low_trust", "MEDIUM", sig.name,
+                              f"trust={b.trust}")
 
         # 2. Build sequence
         seq_keys = [s.to_key() for s in sigs]
