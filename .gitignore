@@ -53,3 +53,24 @@ Thumbs.db
 # CSV history
 history*.csv
 history_live.csv
+
+# OMEGA runtime data
+bus_log.jsonl
+bus_log.jsonl.backup
+bus_log.jsonl.old
+decisions.jsonl
+outcomes.jsonl
+quarantine.jsonl
+security_v2_events.jsonl
+security_v2_model.json
+personal_v2_model.json
+tuned_params.json
+whitelist.json
+
+# Temp test dirs
+test_*_tmp/
+*_tmp/
+
+# Logs
+telemetry.log
+*.log
