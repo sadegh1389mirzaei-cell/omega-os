@@ -408,6 +408,17 @@ def sigs_from_processes(procs) -> List[ProcessSig]:
         name = (p.comm or "").strip()
         args = (p.args or "").strip()
 
+        # SKIP ZOMBIES: any process with 'defunct' in name or args
+        combined = (name + " " + args).lower()
+        if "defunct" in combined:
+            continue
+        if name.startswith("<") and name.endswith(">"):
+            continue
+        if name.strip("[]") == "":
+            continue
+
+
+
         # If args has more info, use a combined identifier
         if args and len(args.split()) > 1:
             # Take first 2 words of args (e.g., "runsv postgres")
