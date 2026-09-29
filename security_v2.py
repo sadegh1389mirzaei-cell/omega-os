@@ -32,6 +32,37 @@ HALFLIFE_HOURS = 48.0
 # Anomaly threshold: below this probability is suspicious
 ANOMALY_THRESHOLD = 0.15
 
+# Known suspicious patterns — severity escalates
+# (pattern, severity, reason)
+THREAT_PATTERNS = [
+    ("nc -l",           "HIGH",     "netcat listener (potential backdoor)"),
+    ("ncat -l",         "HIGH",     "ncat listener"),
+    ("nc -e",           "CRITICAL", "netcat with command execution"),
+    ("nc -c",           "CRITICAL", "netcat with shell"),
+    ("/dev/tcp",        "HIGH",     "bash tcp redirection"),
+    ("curl | sh",       "CRITICAL", "pipe remote script to shell"),
+    ("wget | sh",       "CRITICAL", "pipe remote script to shell"),
+    ("base64 -d",       "MEDIUM",   "base64 decode (obfuscation)"),
+    ("chmod 777",       "MEDIUM",   "weak permissions"),
+    ("rm -rf /",        "CRITICAL", "destructive delete"),
+    ("sudo ",           "MEDIUM",   "privilege escalation attempt"),
+    ("su -",            "MEDIUM",   "privilege escalation attempt"),
+    ("nmap",            "HIGH",     "port scanner"),
+    ("masscan",         "HIGH",     "port scanner"),
+]
+
+
+def classify_threat(name: str, args: str = "") -> tuple:
+    """
+    Returns (severity, reason) if matches a threat pattern,
+    else ("INFO", "unknown process").
+    """
+    text = (name + " " + args).lower()
+    for pattern, severity, reason in THREAT_PATTERNS:
+        if pattern.lower() in text:
+            return severity, reason
+    return "INFO", "new process observed"
+
 
 # ==============================================================
 # Process signature
@@ -257,8 +288,10 @@ class SecurityAIv2:
                 b = ProcessBaseline(name=sig.name,
                                     first_seen=now)
                 self.baselines[sig.name] = b
-                self._emit("new_process", "INFO",
-                          sig.name, "first observed")
+                # Classify threat
+                severity, reason = classify_threat(sig.name)
+                self._emit("new_process", severity,
+                          sig.name, reason)
 
             # Time decay on old baseline? Optional.
             b.count += 1
