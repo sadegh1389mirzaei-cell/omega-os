@@ -83,3 +83,4 @@ tasks.json
 
 # Task manager runtime state
 tasks.json
+web_runner.log
