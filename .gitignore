@@ -74,3 +74,6 @@ test_*_tmp/
 # Logs
 telemetry.log
 *.log
+
+# Task manager runtime
+tasks.jsonl
