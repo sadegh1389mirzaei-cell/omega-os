@@ -20,6 +20,13 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Set
 
+try:
+    from quarantine import QuarantineManager
+    _QUARANTINE_ENABLED = True
+except ImportError:
+    _QUARANTINE_ENABLED = False
+    QuarantineManager = None
+
 
 HOME = os.path.expanduser("~")
 OMEGA_DIR = os.environ.get("OMEGA_DIR") or os.path.join(HOME, "omega")
@@ -230,6 +237,9 @@ class SecurityAIv2:
         self.last_sequence_ts = 0
         self.events: List[dict] = []
         self.total_samples = 0
+        self.auto_quarantine = True
+        self.quarantine = (QuarantineManager()
+                          if _QUARANTINE_ENABLED else None)
 
         self._load()
 
@@ -254,7 +264,8 @@ class SecurityAIv2:
             }, f, indent=2)
 
     def _emit(self, kind: str, severity: str, subject: str,
-              detail: str, score: float = 0.0):
+              detail: str, score: float = 0.0,
+              pid: Optional[int] = None):
         event = {
             "ts": int(time.time() * 1000),
             "kind": kind,
@@ -269,6 +280,18 @@ class SecurityAIv2:
                 f.write(json.dumps(event) + "\n")
         except OSError:
             pass
+
+        # Auto-quarantine on HIGH or CRITICAL
+        if (self.auto_quarantine and self.quarantine
+                and severity in ("HIGH", "CRITICAL")
+                and pid is not None):
+            result = self.quarantine.kill_process(
+                pid=pid, name=subject,
+                severity=severity, reason=detail,
+            )
+            event["quarantine_action"] = result.get("action")
+            print(f"[security] auto-quarantine: "
+                  f"{subject} (pid={pid}) -> {result['action']}")
 
     def observe(self, sigs: List[ProcessSig]):
         """
@@ -291,7 +314,7 @@ class SecurityAIv2:
                 # Classify threat
                 severity, reason = classify_threat(sig.name)
                 self._emit("new_process", severity,
-                          sig.name, reason)
+                          sig.name, reason, pid=sig.pid)
 
             # Time decay on old baseline? Optional.
             b.count += 1
@@ -341,13 +364,17 @@ class SecurityAIv2:
         self.total_samples += 1
 
     def stats(self) -> dict:
-        return {
+        s = {
             "processes_tracked": len(self.baselines),
             "total_transitions": self.markov.total_transitions,
             "events": len(self.events),
             "total_samples": self.total_samples,
             "current_seq_len": len(self.current_sequence),
+            "auto_quarantine": self.auto_quarantine,
         }
+        if self.quarantine:
+            s["quarantined"] = self.quarantine.stats()["killed_total"]
+        return s
 
 
 if __name__ == "__main__":
