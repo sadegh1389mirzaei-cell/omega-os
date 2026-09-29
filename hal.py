@@ -45,6 +45,9 @@ BOGUS_NAMES     = ("soc_boot_thermal", "bat_id", "quiet-thermal-")
 class HAL:
     def __init__(self, bus=None):
         self.bus = bus
+        self._battery_cache = None
+        self._battery_cache_ts = 0
+        self._battery_cache_ttl = 30.0  # seconds
 
     # ──────────────────────────────────────────────────────────
     # CPU frequency — sysfs direct (gets ALL cores)
@@ -207,6 +210,19 @@ class HAL:
     # ──────────────────────────────────────────────────────────
 
     def _probe_battery(self):
+        """Return battery info, cached for _battery_cache_ttl seconds."""
+        now = time.time()
+        if (self._battery_cache is not None
+                and (now - self._battery_cache_ts) < self._battery_cache_ttl):
+            return self._battery_cache
+
+        result = self._probe_battery_uncached()
+        if result:
+            self._battery_cache = result
+            self._battery_cache_ts = now
+        return result
+
+    def _probe_battery_uncached(self):
         # termux-api first (more reliable on Android)
         try:
             r = subprocess.run(["termux-battery-status"],
