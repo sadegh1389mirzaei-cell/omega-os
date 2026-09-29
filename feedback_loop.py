@@ -167,35 +167,57 @@ class FeedbackLoop:
 
         # 1. Temperature stability
         temp_change = new_temp - old_temp
-        if temp_change < -2:
+        if temp_change <= -2:
             score += 15
             notes.append("cooled_down")
-        elif temp_change > 5:
+        elif temp_change >= 5:
             score -= 20
             notes.append("overheating")
-        elif temp_change > 2:
+        elif temp_change >= 2:
             score -= 5
             notes.append("warming")
 
-        # 2. Battery reasonable
+        # 2. Battery reasonable — check power source first
+        old_ps = old_input.get("power_source", 0)
+        new_ps = now_input.get("power_source", 0)
+        # power_source: 0=BATTERY, 1=USB, 2=WIRELESS, 3=DOCK
+        now_charging = new_ps != 0
+        was_charging = old_ps != 0
+
         batt_drain = old_batt - new_batt
-        if batt_drain < 0:
-            score += 10
-            notes.append("charging")
-        elif batt_drain > 5:
-            score -= 15
-            notes.append("fast_drain")
-        elif batt_drain <= 2:
-            score += 10
-            notes.append("efficient")
+
+        if now_charging:
+            # On charger — no concerns about drain
+            score += 5
+            notes.append("on_charger")
+        else:
+            # On battery — drain matters
+            if batt_drain < 0:
+                # Battery increased while on battery? Impossible
+                # (bug in data or read error)
+                notes.append("batt_anomaly")
+            elif batt_drain > 5:
+                score -= 15
+                notes.append("fast_drain")
+            elif batt_drain <= 2:
+                score += 10
+                notes.append("efficient")
+            else:
+                notes.append("normal_drain")
 
         # 3. State appropriateness
-        if old_state == "IDLE" and now_input.get("cpu", 0) > 30:
+        # state codes: 0=IDLE, 1=BALANCED, 2=PERFORMANCE, 3=CREATIVE, 4=COMPUTE
+        now_cpu = now_input.get("cpu", 0)
+        now_temp = now_input.get("temp_soc", 0)
+        if old_state == 0 and now_cpu > 30:
             score -= 10
             notes.append("idle_but_busy")
-        if old_state == "PERFORMANCE" and now_input.get("temp_soc", 0) > 48:
+        if old_state == 2 and now_temp > 45:
             score -= 15
             notes.append("perf_but_hot")
+        if old_state == 3 and now_temp > 45:
+            score -= 10
+            notes.append("creative_but_hot")
 
         score = max(0, min(100, score))
         outcome = "+".join(notes) if notes else "neutral"
