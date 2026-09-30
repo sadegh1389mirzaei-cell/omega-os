@@ -129,3 +129,40 @@ if __name__ == "__main__":
     print(f"  Log file: {QUARANTINE_LOG}")
     print()
 
+
+
+# ==============================================================
+# Web Widget for Dashboard
+# ==============================================================
+
+def web_widget() -> dict:
+    """Dashboard widget for Quarantine Manager."""
+    from widgets import metrics_widget, metric_row
+
+    try:
+        qm = QuarantineManager()
+        s = qm.stats()
+
+        killed = s.get("killed_total", 0)
+        whitelisted = s.get("whitelisted", 0)
+        last = s.get("last_kill")
+
+        return metrics_widget(
+            widget_id="quarantine",
+            title="Quarantine",
+            rows=[
+                metric_row("Killed Total", killed,
+                          "red" if killed > 0 else ""),
+                metric_row("Whitelisted", whitelisted,
+                          "green" if whitelisted > 0 else ""),
+                metric_row("Last Kill", last or "—"),
+            ],
+            priority=35,
+        )
+    except Exception as e:
+        return metrics_widget(
+            widget_id="quarantine",
+            title="Quarantine",
+            rows=[metric_row("Status", "error", "red")],
+            priority=35,
+        )

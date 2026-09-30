@@ -535,3 +535,62 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ==============================================================
+# Web Widget for Dashboard
+# ==============================================================
+
+def web_widget() -> dict:
+    """Dashboard widget for File Trust Store."""
+    from widgets import metrics_widget, metric_row, list_widget
+
+    try:
+        store = FileTrustStore()
+        stats = store.stats()
+
+        by_status = stats.get("by_status", {})
+        danger = by_status.get("DANGER", 0)
+        warn = by_status.get("WARN", 0)
+        trusted = by_status.get("TRUSTED", 0)
+
+        # If there are DANGER files, show them as a list widget
+        if danger > 0:
+            risky = store.top_risky(5)
+            items = []
+            for e in risky:
+                items.append({
+                    "primary": e.last_name[:30],
+                    "secondary": f"trust={e.trust} seen={e.seen_count}",
+                    "badge": e.status(),
+                })
+            return list_widget(
+                widget_id="file_trust",
+                title=f"File Trust ({danger} DANGER)",
+                items=items,
+                priority=25,
+                max_items=5,
+            )
+
+        # Otherwise show metrics
+        return metrics_widget(
+            widget_id="file_trust",
+            title="File Trust",
+            rows=[
+                metric_row("Tracked", stats.get("total_files", 0), "cyan"),
+                metric_row("Trusted", trusted, "green"),
+                metric_row("WARN", warn, "yellow"),
+                metric_row("DANGER", danger,
+                          "red" if danger > 0 else ""),
+                metric_row("Avg Trust",
+                          f"{stats.get('avg_trust', 0):.1f}"),
+            ],
+            priority=25,
+        )
+    except Exception as e:
+        return metrics_widget(
+            widget_id="file_trust",
+            title="File Trust",
+            rows=[metric_row("Status", "error", "red")],
+            priority=25,
+        )

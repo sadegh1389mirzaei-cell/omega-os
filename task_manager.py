@@ -688,3 +688,44 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ==============================================================
+# Web Widget for Dashboard
+# ==============================================================
+
+def web_widget() -> dict:
+    """Dashboard widget for Task Manager."""
+    from widgets import metrics_widget, metric_row
+
+    try:
+        tm = TaskManager()
+        tm.scan()
+        s = tm.stats()
+
+        # Count due tasks
+        now = time.time()
+        due = sum(1 for t in tm.scheduled.values() if t.is_due(now))
+
+        return metrics_widget(
+            widget_id="tasks",
+            title="Scheduled Tasks",
+            rows=[
+                metric_row("Total Tasks", s.get("scheduled", 0), "cyan"),
+                metric_row("Due Now", due,
+                          "yellow" if due > 0 else "green"),
+                metric_row("Processes", s.get("total", 0)),
+                metric_row("Frozen", s.get("frozen", 0),
+                          "yellow" if s.get("frozen", 0) > 0 else ""),
+                metric_row("Total CPU",
+                          f"{s.get('total_cpu', 0)}%"),
+            ],
+            priority=30,
+        )
+    except Exception as e:
+        return metrics_widget(
+            widget_id="tasks",
+            title="Scheduled Tasks",
+            rows=[metric_row("Status", "error", "red")],
+            priority=30,
+        )

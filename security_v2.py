@@ -669,3 +669,51 @@ if __name__ == "__main__":
         print()
 
 
+
+
+# ==============================================================
+# Web Widget for Dashboard
+# ==============================================================
+
+def web_widget() -> dict:
+    """Dashboard widget for Security AI v2."""
+    from widgets import metrics_widget, metric_row
+
+    try:
+        sec = SecurityAIv2()
+        s = sec.stats()
+
+        threat_color = {
+            "NORMAL": "green",
+            "ELEVATED": "yellow",
+            "HIGH": "orange",
+            "CRITICAL": "red",
+        }.get(s.get("threat_level", "NORMAL"), "white")
+
+        rows = [
+            metric_row("Threat Level",
+                      s.get("threat_level", "NORMAL"),
+                      threat_color),
+            metric_row("Processes", s.get("processes_tracked", 0), "cyan"),
+            metric_row("Events", s.get("events", 0)),
+            metric_row("File Anomalies",
+                      s.get("file_anomalies", 0),
+                      "red" if s.get("file_anomalies", 0) > 0 else ""),
+            metric_row("Quarantined",
+                      s.get("quarantined", 0),
+                      "red" if s.get("quarantined", 0) > 0 else ""),
+        ]
+
+        return metrics_widget(
+            widget_id="security",
+            title="Security AI",
+            rows=rows,
+            priority=20,
+        )
+    except Exception as e:
+        return metrics_widget(
+            widget_id="security",
+            title="Security AI",
+            rows=[metric_row("Status", "error", "red")],
+            priority=20,
+        )

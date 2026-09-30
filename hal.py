@@ -367,3 +367,59 @@ def demo():
 
 if __name__ == "__main__":
     demo()
+
+
+# ==============================================================
+# Web Widget for Dashboard
+# ==============================================================
+
+def web_widget() -> dict:
+    """Dashboard widget for HAL."""
+    from widgets import metrics_widget, metric_row
+
+    try:
+        h = HAL()
+        s = h.snapshot()
+
+        cpu = s.get("cpu_usage", [])
+        cpu_avg = sum(cpu) / len(cpu) if cpu else 0
+        mem = s.get("memory", {})
+        ram_pct = mem.get("percent", 0)
+        bat = s.get("battery_pct", 0)
+        plugged = s.get("plugged", "")
+        soc = s.get("soc_temp_c", 0)
+
+        cpu_color = ("red" if cpu_avg > 70
+                    else "yellow" if cpu_avg > 40 else "green")
+        ram_color = ("red" if ram_pct > 85
+                    else "yellow" if ram_pct > 65 else "green")
+        bat_color = ("red" if bat < 20
+                    else "yellow" if bat < 40 else "green")
+        soc_color = ("red" if soc > 55
+                    else "yellow" if soc > 45 else "green")
+
+        return metrics_widget(
+            widget_id="hal",
+            title="Hardware",
+            rows=[
+                metric_row(f"CPU ({s.get('core_count', 0)} cores)",
+                          f"{cpu_avg:.1f}%", cpu_color),
+                metric_row("RAM",
+                          f"{mem.get('used_mb', 0)}/{mem.get('total_mb', 0)} MB ({ram_pct}%)",
+                          ram_color),
+                metric_row("Battery",
+                          f"{bat}% {'⚡' if 'PLUGGED' in plugged else ''}",
+                          bat_color),
+                metric_row("SoC Temp", f"{soc:.1f}C", soc_color),
+                metric_row("Thermal Zones",
+                          len(s.get("thermal_raw", {})), "cyan"),
+            ],
+            priority=10,
+        )
+    except Exception as e:
+        return metrics_widget(
+            widget_id="hal",
+            title="Hardware",
+            rows=[metric_row("Status", "offline", "red")],
+            priority=10,
+        )
