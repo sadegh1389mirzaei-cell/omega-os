@@ -156,11 +156,15 @@ class FileMonitor:
 
     def __init__(self, watch_dirs: List[str] = None, bus=None):
         # Default watch dirs
+        # Note: We deliberately do NOT watch storage/shared
+        # (contains user photos with noisy extension mismatches)
         if watch_dirs is None:
+            # NOTE: storage/downloads is a symlink to entire user storage
+            # (including DCIM, Movies, SHAREit, etc) — we exclude it to
+            # avoid false positives on real user files.
             watch_dirs = [
-                os.path.join(HOME, "storage", "downloads"),
-                os.path.join(HOME, "omega"),
-                "/tmp",
+                os.path.join(HOME, "omega"),  # our own dir only
+                "/tmp",                       # temp (usually safe)
             ]
         self.watch_dirs = [d for d in watch_dirs if os.path.isdir(d)]
         self.known_files: Dict[str, float] = {}  # path -> mtime
@@ -183,9 +187,20 @@ class FileMonitor:
 
         for root_dir in self.watch_dirs:
             for dirpath, dirnames, filenames in os.walk(root_dir):
-                # Skip cache and git
+                # Skip cache, git, and known noisy dirs
+                SKIP_DIRS = {
+                    ".git", "__pycache__",
+                    ".MyGallery", "DCIM",       # camera
+                    ".thumbnails", "cache",      # cache dirs
+                    ".caches", ".tmp",           # temp caches
+                    "Android",                   # android internals
+                    "Pictures", "Movies", "Music",  # media
+                    "SHAREit",                   # share app cache
+                    "WhatsApp",                  # messaging cache
+                    "Telegram",                  # messaging cache
+                }
                 dirnames[:] = [d for d in dirnames
-                              if d not in (".git", "__pycache__")]
+                              if d not in SKIP_DIRS]
 
                 for fname in filenames:
                     fpath = os.path.join(dirpath, fname)
@@ -256,7 +271,13 @@ class FileMonitor:
                 disguised = True
 
         # --- Check 2: Extension mismatch (skip if already flagged) ---
-        if not disguised and ext and ext in EXTENSION_EXPECTED:
+        # Skip media files whose content reads as "text" — many MP4/MKV/AVI
+        # have text-like headers (moov atoms) and are not threats.
+        MEDIA_EXTS = {".mp4", ".mkv", ".avi", ".mov", ".webm",
+                      ".flv", ".m4v", ".wmv"}
+        if ext in MEDIA_EXTS and fmt in ("text", "unknown"):
+            pass  # skip — not an anomaly
+        elif not disguised and ext and ext in EXTENSION_EXPECTED:
             expected = EXTENSION_EXPECTED[ext]
             if fmt not in expected:
                 if fmt not in ("unknown",):
@@ -303,17 +324,36 @@ class FileMonitor:
                 ))
 
         # --- Check 5: Double extension (fake.pdf.exe) ---
+        # Only flag if the SECOND-TO-LAST part is a known DATA extension
+        # (photo.jpg.exe, doc.pdf.scr) — NOT installer files
+        # (python-3.13.15-amd64.exe is legitimate)
         parts = name.split(".")
         if len(parts) >= 3:
-            # Something like "photo.jpg.exe"
-            if parts[-1].lower() in ("exe", "scr", "bat",
-                                     "cmd", "com", "pif"):
+            last = parts[-1].lower()
+            second_last = parts[-2].lower()
+
+            DATA_EXTS = {
+                "jpg", "jpeg", "png", "gif", "bmp", "svg",
+                "pdf", "doc", "docx", "xls", "xlsx",
+                "ppt", "pptx", "txt", "rtf", "odt",
+                "mp3", "mp4", "avi", "mkv", "mov",
+                "zip", "rar", "7z", "tar", "gz",
+                "html", "htm", "xml", "csv", "json",
+                "py", "sh", "js", "bat", "cmd",
+            }
+
+            EXECUTABLE_EXTS = {
+                "exe", "scr", "bat", "cmd", "com", "pif",
+                "vbs", "js", "jar", "msi", "lnk",
+            }
+
+            if last in EXECUTABLE_EXTS and second_last in DATA_EXTS:
                 anomalies.append(FileAnomalyRecord(
                     ts=int(time.time() * 1000),
                     path=path, name=name, size=size,
                     anomaly=FileAnomaly.DOUBLE_EXTENSION,
                     severity="HIGH",
-                    detail=f"double extension: {name}",
+                    detail=f"double extension: .{second_last}.{last}",
                     hash=partial_hash(path) or "",
                 ))
 
@@ -470,11 +510,13 @@ Watch mode:
 
 
 def get_watch_dirs() -> List[str]:
-    """Default watch dirs (only existing ones)."""
+    """Default watch dirs — keep it tight to avoid false positives."""
+    # NOTE: storage/shared is a symlink to entire user storage
+    # (Documents, Music, Movies, Pictures, DCIM, SHAREit, WhatsApp...)
+    # We deliberately exclude it to avoid noisy scans of user data.
     candidates = [
         os.path.join(HOME, "omega"),
-        os.path.join(HOME, "storage", "downloads"),
-        os.path.join(HOME, "storage", "shared"),
+        "/tmp",
     ]
     return [d for d in candidates if os.path.isdir(d)]
 

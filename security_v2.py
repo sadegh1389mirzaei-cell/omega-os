@@ -32,6 +32,7 @@ HOME = os.path.expanduser("~")
 OMEGA_DIR = os.environ.get("OMEGA_DIR") or os.path.join(HOME, "omega")
 DEFAULT_MODEL = os.path.join(OMEGA_DIR, "security_v2_model.json")
 DEFAULT_LOG = os.path.join(OMEGA_DIR, "security_v2_events.jsonl")
+FILE_MONITOR_LOG = os.path.join(OMEGA_DIR, "file_monitor.jsonl")
 
 # Decay: behavior from 48 hours ago weighs half
 HALFLIFE_HOURS = 48.0
@@ -261,6 +262,11 @@ class SecurityAIv2:
         self.quarantine = (QuarantineManager()
                           if _QUARANTINE_ENABLED else None)
 
+        # File Monitor integration
+        self.file_monitor_log = FILE_MONITOR_LOG
+        self.file_monitor_last_ts = 0
+        self.file_anomaly_count = 0
+
         self._load()
 
     def _load(self):
@@ -318,6 +324,56 @@ class SecurityAIv2:
             event["quarantine_action"] = result.get("action")
             print(f"[security] auto-quarantine: "
                   f"{subject} (pid={pid}) -> {result['action']}")
+
+    def ingest_file_anomalies(self) -> int:
+        """
+        Read new file anomalies from file_monitor.jsonl.
+        Returns number of new events processed.
+        """
+        if not os.path.exists(self.file_monitor_log):
+            return 0
+
+        processed = 0
+        try:
+            with open(self.file_monitor_log) as f:
+                for line in f:
+                    try:
+                        evt = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
+                    ts = evt.get("ts", 0)
+                    if ts <= self.file_monitor_last_ts:
+                        continue
+
+                    # Only process HIGH and CRITICAL file anomalies.
+                    # LOW/MEDIUM are counted but NOT turned into events
+                    severity = evt.get("severity", "LOW")
+                    if severity in ("HIGH", "CRITICAL"):
+                        self._handle_file_anomaly(evt)
+                        processed += 1
+                    self.file_monitor_last_ts = ts
+                    self.file_anomaly_count += 1
+        except OSError:
+            pass
+
+        return processed
+
+    def _handle_file_anomaly(self, evt: dict):
+        """Convert a file anomaly into a security event."""
+        severity = evt.get("severity", "LOW")
+        name = evt.get("name", "?")
+        detail = evt.get("detail", "")
+        anomaly = evt.get("anomaly", "?")
+
+        # Emit as a security event (with subject prefixed)
+        subject = f"FILE:{name}"
+        self._emit(
+            kind=f"file_{anomaly}",
+            severity=severity,
+            subject=subject,
+            detail=detail,
+        )
 
     def observe(self, sigs: List[ProcessSig]):
         """
@@ -413,6 +469,7 @@ class SecurityAIv2:
         }
         if self.quarantine:
             s["quarantined"] = self.quarantine.stats()["killed_total"]
+        s["file_anomalies"] = self.file_anomaly_count
         return s
 
 
