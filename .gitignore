@@ -84,3 +84,8 @@ tasks.json
 # Task manager runtime state
 tasks.json
 web_runner.log
+
+# File manager runtime
+cleanup.jsonl
+file_monitor.jsonl
+file_monitor.log
