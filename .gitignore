@@ -89,3 +89,10 @@ web_runner.log
 cleanup.jsonl
 file_monitor.jsonl
 file_monitor.log
+
+# File trust runtime
+file_trust.json
+file_trust_state.json
+file_trust.jsonl
+security_v2.log
+file_trust.log
