@@ -147,7 +147,7 @@ class ModeManager:
     def __init__(self, bus: Optional[EventBus] = None):
         self.bus = bus
         self.mode = SystemMode(changed_ts=int(time.time() * 1000))
-        self._last_change_ts = time.time()
+        self._last_change_ts = 0.0   # allow first change immediately
         self._history: List[dict] = []
 
     # ──────────────────────────────────────────────────────────

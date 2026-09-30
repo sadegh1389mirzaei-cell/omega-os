@@ -13,6 +13,7 @@ from omega import (
     PerformanceState, ThermalState, DeviceMode, PreWarmStage,
     WorkloadClass,
 )
+from modes import ModeManager
 from real_telemetry import RealTelemetry
 from processes import ProcessScanner, WorkloadClassifier
 from security_v2 import SecurityAIv2 as SecurityAI
@@ -268,6 +269,7 @@ def main(stdscr):
     # ── Components ──
     cfg = Config.load("config.json")
     engine = DecisionEngine(cfg)
+    mm = ModeManager(bus=bus)      # emits mode.* events to bus
     rt = RealTelemetry()
     scanner = ProcessScanner()
     classifier = WorkloadClassifier()
@@ -367,6 +369,12 @@ def main(stdscr):
                     temp_c=last_iv.temp_soc_c / 10,
                     workload=WorkloadClass(last_iv.foreground_workload).name,
                 )
+
+            # Mode manager (emits bus events on transition)
+            try:
+                mm.evaluate(last_iv)
+            except Exception:
+                pass
 
             if sample_count % DECIDE_EVERY_N == 0:
                 last_cmd = engine.evaluate(last_iv)
