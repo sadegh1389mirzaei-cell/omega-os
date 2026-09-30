@@ -39,7 +39,7 @@ from typing import Optional, List
 RECORD_SIZE = 64   # actual computed below
 RECORD_FMT = "!QBBHIII IBBBBII"  # big-endian, packed
 # note: extra spaces ignored; must match exactly
-RECORD_FMT = "!QBBHIIIIIBBBBII"   # 15 fields (with zram)
+RECORD_FMT = "!QBBHIIIIIBBBBQI"   # 15 fields (with zram)
 RECORD_SIZE = struct.calcsize(RECORD_FMT) + 16   # +16 for checksum
 
 

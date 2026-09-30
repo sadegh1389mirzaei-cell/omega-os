@@ -1,7 +1,7 @@
 # OMEGA OS — Session Handoff
 
 > **Status:** Active development
-> **Last updated:** 2026-09-29
+> **Last updated:** 2026-09-30
 > **Version:** 0.8 "Axon"
 > **Repo:** https://github.com/sadegh1389mirzaei-cell/omega-os
 
@@ -63,10 +63,11 @@ What is simulated:
 
 Numbers:
 
-- ~50 Python files
-- ~17,000 lines of code
-- 12 git commits
+- ~58 Python files
+- ~20,000 lines of code
+- 23 git commits
 - 130+ tests passing
+- 3 JobScheduler jobs active
 - 16 of 17 spec sections covered
 
 Environment:
@@ -586,3 +587,163 @@ Status:  Active development
 Built on Termux, on a phone, in one night.
 
 The operating system follows the user, not the other way around.
+
+---
+
+## 15. Module Updates (since initial HANDOFF)
+
+New modules added after the first HANDOFF.md was written.
+
+Security / File monitoring:
+
+  file_monitor.py     ~700 lines   6 anomaly types + magic bytes
+  file_trust.py       ~500 lines   Hash-based trust store
+  quarantine.py       ~130 lines   Safe process kill (dry-run + real)
+
+Task / File management:
+
+  task_manager.py     ~600 lines   Process + scheduler
+  file_manager.py     ~500 lines   Cleanup + archive
+  file_inspector.py   ~200 lines   Magic bytes detection (50+ sigs)
+
+UI / Web:
+
+  widgets.py          ~250 lines   Auto-discovery widget system
+  om_simple.py        ~400 lines   Stable web dashboard
+  om_web_v2.py        ~700 lines   Widget dashboard (unstable on Honor)
+
+Helpers:
+
+  smart_engine.py     ~90 lines    Decision + Feedback wrapper
+  telemetry_proto.py  ~300 lines   Binary ring buffer (180k rec/s)
+  sandbox.py          ~280 lines   Capability enforcement
+  pkgman.py           ~140 lines   .omapp package manager
+  modes.py            ~480 lines   State machine layer (D/P/P/T)
+
+Total: 14 new modules, ~4,800 additional lines.
+
+---
+
+## 16. File Security Pipeline
+
+Complete flow (spec Section 11.5.1, now implemented):
+
+  File appears (created or downloaded)
+      |
+      v
+  file_monitor.py: scan + magic bytes check
+      6 anomaly types:
+        - extension_mismatch    (.jpg that is ELF)
+        - executable_disguised  (.jpg with ELF content)
+        - suspicious_location   (exec in /tmp)
+        - no_extension_binary   (bare binary)
+        - double_extension      (.jpg.exe)
+        - hidden_executable     (.hidden that is binary)
+      Skip dirs: .git, __pycache__, DCIM, WhatsApp, Telegram
+      Emits: security.file_anomaly (HIGH/CRITICAL only)
+      |
+      v
+  file_trust.py: hash-based score
+      Deltas: seen_clean +1, low -3, medium -10,
+              high -25, critical -50, user_approved +40
+      Status: TRUSTED (>80) / NEUTRAL (30-79) /
+              WARN (16-29) / DANGER (<=15)
+      |
+      v
+  security_v2.py: reads anomalies
+      - Only ingests HIGH/CRITICAL (LOW/MEDIUM benign)
+      - Updates threat level
+      - Adjusts process trust
+      |
+      v
+  quarantine.py: kills if CRITICAL
+      SIGTERM first, SIGKILL fallback
+      Logs to quarantine.jsonl
+
+Runs every 15 minutes via JobScheduler Job 3.
+
+---
+
+## 17. JobScheduler Jobs
+
+Three jobs registered, all with 15-min interval.
+
+Job 1 -- task_runner.sh
+  python3 task_manager.py run-due
+  Tasks: temp_snapshot (5m), disk_check (1h), cleanup_old (24h)
+
+Job 2 -- web_runner.sh
+  Checks tmux for web server; restarts if missing
+
+Job 3 -- file_monitor_runner.sh
+  Step 1: python3 file_monitor.py scan
+  Step 2: python3 file_trust.py integrate
+  Step 3: python3 -c "from security_v2 import ..."
+
+Register (job-id must be unique!):
+
+  termux-job-scheduler --script ~/omega/task_runner.sh \
+                      --job-id 1 --period-ms 900000 \
+                      --network any --battery-not-low true \
+                      --persisted true
+
+  termux-job-scheduler --script ~/omega/web_runner.sh \
+                      --job-id 2 --period-ms 900000 \
+                      --network any --battery-not-low true \
+                      --persisted true
+
+  termux-job-scheduler --script ~/omega/file_monitor_runner.sh \
+                      --job-id 3 --period-ms 900000 \
+                      --network any --battery-not-low true \
+                      --persisted true
+
+---
+
+## 18. Changelog (2026-09-29 to 2026-09-30)
+
+Key changes since initial HANDOFF.md:
+
+  - 11 new commits (12 -> 23)
+  - ~9 new modules (~17K -> ~20K lines)
+  - File Security Pipeline complete
+  - Widget auto-discovery system working
+  - 3 JobScheduler jobs active
+  - Task Manager with persistent scheduled tasks
+  - File cleanup automation (14 categories)
+  - Dynamic File Trust Store (hash-based)
+
+Early-session decisions (locked in):
+
+  1. Code: English. Chat: Persian. Docs: mixed.
+  2. All enums start at 0 (NOT auto()).
+  3. f-string: never f"{x:fmt, y}" -- split first.
+  4. Heredoc: use 'END' single-quoted. Files < 100 lines.
+  5. Thermal thresholds: 45/50/60 C (not 42/45/50 spec).
+  6. Battery: trust power_source, not drain direction.
+  7. Trust Score: dynamic, per-process AND per-file.
+  8. Consistency checks: battery anomaly + temp jumps.
+
+Fixed bugs (documented for next session):
+
+  - Battery trend said "charging" wrongly
+      -> use power_source
+  - Temperature threshold bug (< vs <=)
+      -> inclusive comparison
+  - State comparison bug (int vs string)
+      -> use numeric codes
+  - <defunct> processes counted as new
+      -> filter by "defunct" in name+args
+  - re.subn with template string raises \x errors
+      -> use lambda in re.subn
+
+Still open:
+
+  - Honor kills Termux background
+      -> mitigated by JobScheduler, but not perfect
+  - Web dashboard unstable on Honor
+      -> om_simple.py is the stable fallback
+  - Widgets not yet integrated into om_simple.py
+  - Personal AI v2 has limited data (~28 events)
+      -> needs a few more days of collector
+  - HAL read-only (no frequency control)
+      -> needs root

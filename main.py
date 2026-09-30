@@ -237,7 +237,7 @@ def phase_ai_resource():
 
 
 def phase_ai_security():
-    from security_ai import SecurityAI
+    from security_v2 import SecurityAIv2 as SecurityAI
     sec = SecurityAI(state_dir=OMEGA_DIR)
     RUNTIME.security = sec
     RUNTIME.register("security-ai")
@@ -247,7 +247,7 @@ def phase_ai_security():
 
 
 def phase_ai_personal():
-    from personal_ai import PersonalAI
+    from personal_ai_v2 import PersonalAIv2 as PersonalAI
     pai = PersonalAI(
         log_path=os.path.join(OMEGA_DIR, "bus_log.jsonl"),
         model_path=os.path.join(OMEGA_DIR, "personal_model.json"),

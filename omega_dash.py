@@ -15,7 +15,7 @@ from omega import (
 )
 from real_telemetry import RealTelemetry
 from processes import ProcessScanner, WorkloadClassifier
-from security_ai import SecurityAI
+from security_v2 import SecurityAIv2 as SecurityAI
 from bus import EventBus, Topic, Event
 import bus_hooks
 

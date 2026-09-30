@@ -398,7 +398,7 @@ class ModeManager:
         elif t >= self.SOC_THROTTLE:
             self.set_thermal(ThermalState.THROTTLE, f"auto: {t:.1f}C")
         elif t >= self.SOC_WARNING:
-            self.set_thermal(ThermalState.WARNING, f"auto: {t:.1f}C")
+            self.set_thermal(ThermalState.WARM, f"auto: {t:.1f}C")
         else:
             self.set_thermal(ThermalState.NORMAL, f"auto: {t:.1f}C")
 
